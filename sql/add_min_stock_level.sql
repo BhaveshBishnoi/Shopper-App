@@ -1,0 +1,2 @@
+ALTER TABLE products
+ADD COLUMN min_stock_level INT DEFAULT 10 NOT NULL;

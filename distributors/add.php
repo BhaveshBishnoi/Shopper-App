@@ -1,67 +1,61 @@
 <?php
-session_start();
 require_once "../config/db_connect.php";
+require_once "../includes/header.php";
 require_once "../includes/functions.php";
-require_once "../includes/notifications.php";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    try {
-        // Sanitize and validate input
-        $name = sanitize_input($_POST['name']);
-        $contact_person = sanitize_input($_POST['contact_person']);
-        $phone = sanitize_input($_POST['phone']);
-        $email = sanitize_input($_POST['email']);
-        $address = sanitize_input($_POST['address']);
-        $total_goods = floatval($_POST['total_goods_received']);
-        $total_paid = floatval($_POST['total_amount_paid']);
-        
-        // Calculate pending amount
-        $pending_amount = $total_goods - $total_paid;
-        
-        // Validate required fields
-        $errors = [];
-        if (empty($name)) $errors[] = "Distributor name is required";
-        if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = "Invalid email format";
-        }
-        if ($total_goods < 0) $errors[] = "Total goods received cannot be negative";
-        if ($total_paid < 0) $errors[] = "Total amount paid cannot be negative";
-        if ($total_paid > $total_goods) $errors[] = "Amount paid cannot exceed total goods value";
+// Initialize variables
+$errors = [];
+$distributor = [
+    'name' => '',
+    'contact_person' => '',
+    'phone' => '',
+    'email' => '',
+    'address' => '',
+    'gst_number' => ''
+];
 
-        if (empty($errors)) {
-            // Insert distributor
-            $query = "INSERT INTO distributors (name, contact_person, phone, email, address, 
-                     total_goods_received, total_amount_paid, pending_amount) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            
-            $stmt = mysqli_prepare($conn, $query);
-            if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "sssssddd", 
-                    $name, $contact_person, $phone, $email, $address,
-                    $total_goods, $total_paid, $pending_amount
-                );
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Sanitize inputs
+    $distributor = [
+        'name' => sanitize_input($_POST['name'] ?? ''),
+        'contact_person' => sanitize_input($_POST['contact_person'] ?? ''),
+        'phone' => sanitize_input($_POST['phone'] ?? ''),
+        'email' => sanitize_input($_POST['email'] ?? ''),
+        'address' => sanitize_input($_POST['address'] ?? ''),
+        'gst_number' => sanitize_input($_POST['gst_number'] ?? '')
+    ];
 
-                if (mysqli_stmt_execute($stmt)) {
-                    $_SESSION['success'] = "Distributor added successfully";
-                    header("Location: index.php");
-                    exit;
-                } else {
-                    throw new Exception(mysqli_error($conn));
-                }
-            } else {
-                throw new Exception(mysqli_error($conn));
-            }
+    // Validate inputs
+    if (empty($distributor['name'])) {
+        $errors[] = "Distributor name is required";
+    }
+    if (!empty($distributor['email']) && !filter_var($distributor['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email format";
+    }
+
+    // If no errors, insert into database
+    if (empty($errors)) {
+        $stmt = mysqli_prepare($conn, "INSERT INTO distributors 
+            (name, contact_person, phone, email, address, gst_number) 
+            VALUES (?, ?, ?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, "ssssss", 
+            $distributor['name'], 
+            $distributor['contact_person'], 
+            $distributor['phone'], 
+            $distributor['email'], 
+            $distributor['address'], 
+            $distributor['gst_number']);
+
+        if (mysqli_stmt_execute($stmt)) {
+            $_SESSION['success'] = "Distributor added successfully";
+            header("Location: manage_distributors.php");
+            exit;
         } else {
-            foreach ($errors as $error) {
-                add_notification($error, "error");
-            }
+            $errors[] = "Error adding distributor: " . mysqli_error($conn);
         }
-    } catch (Exception $e) {
-        $_SESSION['error'] = "Error adding distributor: " . $e->getMessage();
     }
 }
-
-require_once "../includes/header.php";
 ?>
 
 <div class="container-fluid py-4">
@@ -71,50 +65,56 @@ require_once "../includes/header.php";
                 <div class="card-header pb-0">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Add New Distributor</h5>
-                        <a href="index.php" class="btn btn-secondary btn-sm">
+                        <a href="manage_distributors.php" class="btn btn-secondary btn-sm">
                             <i class="fas fa-arrow-left me-2"></i>Back to Distributors
                         </a>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="<?= htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+                    <?php if (!empty($errors)): ?>
+                        <div class="alert alert-danger">
+                            <h5>Please fix the following errors:</h5>
+                            <ul>
+                                <?php foreach ($errors as $error): ?>
+                                    <li><?= htmlspecialchars($error) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <form method="post">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="name" class="form-label">Distributor Name <span class="text-danger">*</span></label>
+                                    <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="name" name="name" required 
-                                           value="<?= isset($_POST['name']) ? htmlspecialchars($_POST['name']) : '' ?>">
+                                           value="<?= htmlspecialchars($distributor['name']) ?>">
                                 </div>
                                 <div class="mb-3">
                                     <label for="contact_person" class="form-label">Contact Person</label>
                                     <input type="text" class="form-control" id="contact_person" name="contact_person"
-                                           value="<?= isset($_POST['contact_person']) ? htmlspecialchars($_POST['contact_person']) : '' ?>">
+                                           value="<?= htmlspecialchars($distributor['contact_person']) ?>">
                                 </div>
                                 <div class="mb-3">
                                     <label for="phone" class="form-label">Phone</label>
                                     <input type="text" class="form-control" id="phone" name="phone"
-                                           value="<?= isset($_POST['phone']) ? htmlspecialchars($_POST['phone']) : '' ?>">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="email" name="email"
-                                           value="<?= isset($_POST['email']) ? htmlspecialchars($_POST['email']) : '' ?>">
+                                           value="<?= htmlspecialchars($distributor['phone']) ?>">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           value="<?= htmlspecialchars($distributor['email']) ?>">
+                                </div>
+                                <div class="mb-3">
                                     <label for="address" class="form-label">Address</label>
-                                    <textarea class="form-control" id="address" name="address" rows="3"><?= isset($_POST['address']) ? htmlspecialchars($_POST['address']) : '' ?></textarea>
+                                    <textarea class="form-control" id="address" name="address" rows="3"><?= htmlspecialchars($distributor['address']) ?></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="total_goods_received" class="form-label">Total Goods Received (₹)</label>
-                                    <input type="number" step="0.01" class="form-control" id="total_goods_received" name="total_goods_received" 
-                                           value="<?= isset($_POST['total_goods_received']) ? htmlspecialchars($_POST['total_goods_received']) : '0' ?>">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="total_amount_paid" class="form-label">Total Amount Paid (₹)</label>
-                                    <input type="number" step="0.01" class="form-control" id="total_amount_paid" name="total_amount_paid" 
-                                           value="<?= isset($_POST['total_amount_paid']) ? htmlspecialchars($_POST['total_amount_paid']) : '0' ?>">
+                                    <label for="gst_number" class="form-label">GST Number</label>
+                                    <input type="text" class="form-control" id="gst_number" name="gst_number"
+                                           value="<?= htmlspecialchars($distributor['gst_number']) ?>">
                                 </div>
                             </div>
                         </div>

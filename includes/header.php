@@ -411,6 +411,13 @@ ob_start();
                     </ul>
                 </li>
 
+                <li class="<?php echo $current_dir === 'inventory' ? 'active' : ''; ?>">
+                    <a href="/shopper/inventory/index.php">
+                        <i class="fas fas fa-boxes"></i>
+                        <span class="sidebar-text">Inventory</span>
+                    </a>
+                </li>
+
                 <li class="<?php echo $current_dir === 'analytics' ? 'active' : ''; ?>">
                     <a href="/shopper/analytics/overview.php">
                         <i class="fas fa-chart-line"></i>

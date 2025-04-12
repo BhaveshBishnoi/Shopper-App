@@ -1,63 +1,40 @@
 <?php
-session_start();
 require_once "../config/db_connect.php";
-require_once "../includes/functions.php";
 
-try {
-    // Check if distributor ID is provided
-    if (!isset($_GET['id'])) {
-        throw new Exception("Distributor ID not provided");
-    }
-
-    $id = intval($_GET['id']);
-
-    // Check if distributor exists
-    $sql = "SELECT * FROM distributors WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    if (!$stmt) {
-        throw new Exception("Database error: " . mysqli_error($conn));
-    }
-
-    mysqli_stmt_bind_param($stmt, "i", $id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    if (!$result || mysqli_num_rows($result) === 0) {
-        throw new Exception("Distributor not found");
-    }
-
-    $distributor = mysqli_fetch_assoc($result);
-    mysqli_stmt_close($stmt);
-
-    // Check if distributor has pending amount
-    if ($distributor['pending_amount'] > 0) {
-        throw new Exception("Cannot delete distributor with pending payments");
-    }
-
-    // Delete distributor
-    $sql = "DELETE FROM distributors WHERE id = ?";
-    $stmt = mysqli_prepare($conn, $sql);
-    if (!$stmt) {
-        throw new Exception("Database error: " . mysqli_error($conn));
-    }
-
-    mysqli_stmt_bind_param($stmt, "i", $id);
-    
-    if (!mysqli_stmt_execute($stmt)) {
-        throw new Exception("Error deleting distributor: " . mysqli_error($conn));
-    }
-
-    mysqli_stmt_close($stmt);
-    mysqli_close($conn);
-
-    // Return success response
-    $_SESSION['success'] = "Distributor deleted successfully";
-    header("Location: index.php");
-    exit;
-
-} catch (Exception $e) {
-    $_SESSION['error'] = $e->getMessage();
-    header("Location: index.php");
+// Check if ID is provided
+if (!isset($_GET['id'])) {
+    header("Location: manage_distributors.php");
     exit;
 }
+
+$id = intval($_GET['id']);
+
+// Start transaction
+mysqli_begin_transaction($conn);
+
+try {
+    // First delete related transactions
+    $stmt = mysqli_prepare($conn, "DELETE FROM distributor_transactions WHERE distributor_id = ?");
+    mysqli_stmt_bind_param($stmt, "i", $id);
+    mysqli_stmt_execute($stmt);
+
+    // Then delete distributor products
+    $stmt = mysqli_prepare($conn, "DELETE FROM distributor_products WHERE distributor_id = ?");
+    mysqli_stmt_bind_param($stmt, "i", $id);
+    mysqli_stmt_execute($stmt);
+
+    // Finally delete the distributor
+    $stmt = mysqli_prepare($conn, "DELETE FROM distributors WHERE id = ?");
+    mysqli_stmt_bind_param($stmt, "i", $id);
+    mysqli_stmt_execute($stmt);
+
+    mysqli_commit($conn);
+    $_SESSION['success'] = "Distributor deleted successfully";
+} catch (Exception $e) {
+    mysqli_rollback($conn);
+    $_SESSION['error'] = "Error deleting distributor: " . $e->getMessage();
+}
+
+header("Location: manage_distributors.php");
+exit;
 ?>

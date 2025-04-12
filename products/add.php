@@ -1,52 +1,10 @@
 <?php
-// Enable full error reporting
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Start session securely
-if (session_status() === PHP_SESSION_NONE) {
-    session_start([
-        'cookie_lifetime' => 86400,
-        'cookie_secure'   => isset($_SERVER['HTTPS']),
-        'cookie_httponly' => true,
-        'cookie_samesite' => 'Strict'
-    ]);
-}
-
-// Verify required files
-$required_files = [
-    '../config/db_connect.php',
-    '../includes/functions.php',
-    '../includes/notifications.php',
-    '../includes/product_notifications.php',
-    '../includes/header.php',
-    '../includes/footer.php'
-];
-
-foreach ($required_files as $file) {
-    if (!file_exists($file)) {
-        die("Missing required file: $file");
-    }
-    if (!is_readable($file)) {
-        die("Cannot read required file: $file");
-    }
-}
-
-// Include required files
 require_once "../config/db_connect.php";
-
-// Test database connection
-if (!$conn) {
-    die("Database connection failed: " . mysqli_connect_error());
-}
-
+require_once "../includes/header.php";
 require_once "../includes/functions.php";
-require_once "../includes/notifications.php";
-require_once "../includes/product_notifications.php";
 
 // Initialize variables
 $errors = [];
-$success = false;
 $product_data = [
     'name' => '',
     'sku' => '',
@@ -120,11 +78,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (mysqli_stmt_execute($stmt)) {
                 $product_id = mysqli_insert_id($conn);
                 
+                // If initial stock is added, create inventory record
+                if ($product_data['stock_quantity'] > 0) {
+                    $inventory_query = "INSERT INTO inventory 
+                        (product_id, quantity, purchase_price, transaction_date)
+                        VALUES (?, ?, ?, CURDATE())";
+                    $stmt = mysqli_prepare($conn, $inventory_query);
+                    $purchase_price = $product_data['cost_price'] ?? $product_data['price'] * 0.8; // Default to 80% of selling price if cost not set
+                    mysqli_stmt_bind_param($stmt, "iid", 
+                        $product_id, 
+                        $product_data['stock_quantity'], 
+                        $purchase_price
+                    );
+                    mysqli_stmt_execute($stmt);
+                }
+                
                 // Handle distributor assignment if provided
                 if (!empty($_POST['distributor_id'])) {
                     $distributor_id = intval($_POST['distributor_id']);
                     $distributor_quantity = intval($_POST['distributor_quantity'] ?? $product_data['stock_quantity']);
-                    $purchase_price = floatval($_POST['purchase_price'] ?? $product_data['cost_price'] ?? $product_data['price']);
+                    $purchase_price = floatval($_POST['purchase_price'] ?? $product_data['cost_price'] ?? $product_data['price'] * 0.8);
                     
                     // Insert into distributor_products
                     $distributor_query = "INSERT INTO distributor_products 
@@ -146,7 +119,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 }
                 
                 mysqli_commit($conn);
-                $success = true;
+                $_SESSION['success'] = "Product added successfully!";
                 
                 // Notifications
                 notify_product_created($product_data['name'], $product_data['sku']);
@@ -238,7 +211,7 @@ require_once "../includes/header.php";
                                            value="<?= htmlspecialchars($product_data['cost_price'] ?? '') ?>">
                                 </div>
                                 <div class="mb-3">
-                                    <label for="stock_quantity" class="form-label">Stock Quantity <span class="text-danger">*</span></label>
+                                    <label for="stock_quantity" class="form-label">Initial Stock <span class="text-danger">*</span></label>
                                     <input type="number" class="form-control" id="stock_quantity" name="stock_quantity" required
                                            value="<?= htmlspecialchars($product_data['stock_quantity']) ?>">
                                 </div>
@@ -280,14 +253,14 @@ require_once "../includes/header.php";
                                         <div class="mb-3">
                                             <label for="distributor_quantity" class="form-label">Quantity</label>
                                             <input type="number" class="form-control" id="distributor_quantity" name="distributor_quantity"
-                                                   min="1" value="<?= htmlspecialchars($_POST['distributor_quantity'] ?? $product_data['stock_quantity']) ?>">
+                                                   min="1" value="<?= htmlspecialchars($product_data['stock_quantity']) ?>">
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="mb-3">
                                             <label for="purchase_price" class="form-label">Purchase Price (per unit)</label>
                                             <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price"
-                                                   value="<?= htmlspecialchars($_POST['purchase_price'] ?? $product_data['cost_price'] ?? '') ?>">
+                                                   value="<?= htmlspecialchars($product_data['cost_price'] ?? '') ?>">
                                         </div>
                                     </div>
                                 </div>
@@ -321,6 +294,17 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
         }
     });
     
+    // Validate price and quantity values
+    if (parseFloat(document.getElementById('price').value) <= 0) {
+        alert('Price must be greater than 0');
+        valid = false;
+    }
+    
+    if (parseInt(document.getElementById('stock_quantity').value) < 0) {
+        alert('Stock quantity cannot be negative');
+        valid = false;
+    }
+    
     // Validate distributor fields if distributor is selected
     const distributorId = document.getElementById('distributor_id').value;
     if (distributorId) {
@@ -340,6 +324,26 @@ document.getElementById('addProductForm').addEventListener('submit', function(e)
     
     if (!valid) {
         e.preventDefault();
+    }
+});
+
+// Auto-fill distributor quantity when stock quantity changes
+document.getElementById('stock_quantity').addEventListener('change', function() {
+    const stockQty = parseInt(this.value);
+    const distQty = document.getElementById('distributor_quantity');
+    
+    if (!isNaN(stockQty) && stockQty > 0) {
+        distQty.value = stockQty;
+    }
+});
+
+// Auto-fill purchase price when cost price changes
+document.getElementById('cost_price').addEventListener('change', function() {
+    const costPrice = parseFloat(this.value);
+    const purchasePrice = document.getElementById('purchase_price');
+    
+    if (!isNaN(costPrice) && costPrice > 0) {
+        purchasePrice.value = costPrice;
     }
 });
 </script>

@@ -80,6 +80,18 @@ $sql_distributors = "CREATE TABLE IF NOT EXISTS distributors (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
+$sql_distributor_products = "CREATE TABLE IF NOT EXISTS distributor_products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    distributor_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL DEFAULT 0,
+    purchase_price DECIMAL(10,2) NOT NULL,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (distributor_id) REFERENCES distributors(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY (distributor_id, product_id)
+
+)";
 
 // Execute all table creation queries
 $tables = [
@@ -89,6 +101,7 @@ $tables = [
     'sale_items' => $sql_sale_items,
     'settings' => $sql_settings,
     'distributors'=> $sql_distributors
+    'distributor_products'=> $sql_distributor_products
 ];
 
 $errors = [];

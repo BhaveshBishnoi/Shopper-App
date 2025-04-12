@@ -66,6 +66,20 @@ $sql_settings = "CREATE TABLE IF NOT EXISTS settings (
     smtp_encryption ENUM('none', 'tls', 'ssl') DEFAULT 'tls',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )";
+// Create Distributor table
+$sql_distributors = "CREATE TABLE IF NOT EXISTS distributors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    contact_person VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    address TEXT,
+    total_goods_received DECIMAL(12,2) DEFAULT 0,
+    total_amount_paid DECIMAL(12,2) DEFAULT 0,
+    pending_amount DECIMAL(12,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
 
 // Execute all table creation queries
 $tables = [
@@ -73,7 +87,8 @@ $tables = [
     'customers' => $sql_customers,
     'sales' => $sql_sales,
     'sale_items' => $sql_sale_items,
-    'settings' => $sql_settings
+    'settings' => $sql_settings,
+    'distributors'=> $sql_distributors
 ];
 
 $errors = [];

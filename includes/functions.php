@@ -266,4 +266,17 @@ function generate_random_string($length = 10) {
     }
     return $string;
 }
+
+function notify_product_created($product_name, $sku) {
+    // Implement your notification logic here
+    // For example, you could send an email, log the event, or display a message
+    error_log("Product created: $product_name (SKU: $sku)");
+}
+
+function notify_product_low_stock($product_name, $stock_quantity, $low_stock_threshold) {
+    // Implement your notification logic here
+    // For example, you could send an email, log the event, or display a message
+    error_log("Low stock alert for product: $product_name. Current stock: $stock_quantity, Threshold: $low_stock_threshold");
+}
+
 ?>

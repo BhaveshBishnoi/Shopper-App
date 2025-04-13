@@ -75,34 +75,70 @@ $avg_order_value = $total_orders > 0 ? $total_revenue / $total_orders : 0;
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card">
+            <div class="card text-white bg-info mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Total Customers</h6>
+                    <h6 class="card-title">Total Customers</h6>
                     <h4 class="mb-0"><?php echo $total_customers; ?></h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card text-white bg-success mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Total Orders</h6>
+                    <h6 class="card-title">Total Orders</h6>
                     <h4 class="mb-0"><?php echo $total_orders; ?></h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card text-white bg-warning mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Total Revenue</h6>
+                    <h6 class="card-title">Total Revenue</h6>
                     <h4 class="mb-0"><?php echo format_currency($total_revenue); ?></h4>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card">
+            <div class="card text-white bg-danger mb-3">
                 <div class="card-body">
-                    <h6 class="card-title text-muted">Average Order Value</h6>
+                    <h6 class="card-title">Average Order Value</h6>
                     <h4 class="mb-0"><?php echo format_currency($avg_order_value); ?></h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Blocks for Easy Viewing -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total Sales</h5>
+                    <p class="card-text"><?php echo format_currency($total_revenue); ?></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-secondary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Orders Processed</h5>
+                    <p class="card-text"><?php echo $total_orders; ?> Orders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Avg. Order Value</h5>
+                    <p class="card-text"><?php echo format_currency($avg_order_value); ?></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Customer Count</h5>
+                    <p class="card-text"><?php echo $total_customers; ?> Customers</p>
                 </div>
             </div>
         </div>

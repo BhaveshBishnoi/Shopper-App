@@ -29,7 +29,7 @@ $result = mysqli_query($conn, $query);
                             <?= $_SESSION['error']; unset($_SESSION['error']); ?>
                         </div>
                     <?php endif; ?>
-                    
+
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover datatable">
                             <thead class="table-light">

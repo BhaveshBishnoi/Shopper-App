@@ -2,7 +2,7 @@
 session_start();
 require_once "../config/db_connect.php";
 
-// Create users table if not exists
+// 1. Ensure the table has no required 'email' column
 $sql = "CREATE TABLE IF NOT EXISTS users (
     id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -10,20 +10,36 @@ $sql = "CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )";
 
+// Force-alter table if 'email' exists (removes it)
+$alter_sql = "ALTER TABLE users DROP COLUMN IF EXISTS email";
+mysqli_query($conn, $alter_sql);
+
+// Proceed with table creation
 if(mysqli_query($conn, $sql)){
-    // Check if default admin user exists
+    // Check if default admin exists
     $check_admin = "SELECT * FROM users WHERE username = 'admin'";
     $result = mysqli_query($conn, $check_admin);
     
     if(mysqli_num_rows($result) == 0){
-        // Create default admin user
+        // Create admin (no email needed)
         $default_password = password_hash("admin123", PASSWORD_DEFAULT);
-        $insert_admin = "INSERT INTO users (username, password) VALUES ('admin', '$default_password')";
-        mysqli_query($conn, $insert_admin);
+        $insert_admin = "INSERT INTO users (username, password) VALUES (?, ?)";
+        
+        $stmt = mysqli_prepare($conn, $insert_admin);
+        $admin_username = "admin";
+        mysqli_stmt_bind_param($stmt, "ss", $admin_username, $default_password);
+        mysqli_stmt_execute($stmt);
+        mysqli_stmt_close($stmt);
     }
 }
 
+// LOGIN HANDLING (unchanged)
 if($_SERVER["REQUEST_METHOD"] == "POST"){
+    if(empty(trim($_POST["username"])) || empty(trim($_POST["password"]))){
+        header("location: ../index.php?error=empty_fields");
+        exit();
+    }
+
     $username = trim($_POST["username"]);
     $password = trim($_POST["password"]);
     
@@ -39,25 +55,25 @@ if($_SERVER["REQUEST_METHOD"] == "POST"){
                 mysqli_stmt_bind_result($stmt, $id, $username, $hashed_password);
                 if(mysqli_stmt_fetch($stmt)){
                     if(password_verify($password, $hashed_password)){
-                        session_start();
-                        
                         $_SESSION["loggedin"] = true;
                         $_SESSION["id"] = $id;
                         $_SESSION["username"] = $username;
-                        
                         header("location: ../dashboard.php");
+                        exit();
                     } else {
                         header("location: ../index.php?error=invalid_password");
+                        exit();
                     }
                 }
             } else {
                 header("location: ../index.php?error=invalid_username");
+                exit();
             }
         } else {
             header("location: ../index.php?error=server_error");
+            exit();
         }
         mysqli_stmt_close($stmt);
     }
+    mysqli_close($conn);
 }
-mysqli_close($conn);
-?>

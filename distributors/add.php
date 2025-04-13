@@ -36,15 +36,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // If no errors, insert into database
     if (empty($errors)) {
-        $stmt = mysqli_prepare($conn, "INSERT INTO distributors 
-            (name, contact_person, phone, email, address, gst_number) 
+        $stmt = mysqli_prepare($conn, "INSERT INTO distributors
+            (name, contact_person, phone, email, address, gst_number)
             VALUES (?, ?, ?, ?, ?, ?)");
-        mysqli_stmt_bind_param($stmt, "ssssss", 
-            $distributor['name'], 
-            $distributor['contact_person'], 
-            $distributor['phone'], 
-            $distributor['email'], 
-            $distributor['address'], 
+        mysqli_stmt_bind_param($stmt, "ssssss",
+            $distributor['name'],
+            $distributor['contact_person'],
+            $distributor['phone'],
+            $distributor['email'],
+            $distributor['address'],
             $distributor['gst_number']);
 
         if (mysqli_stmt_execute($stmt)) {
@@ -81,13 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </ul>
                         </div>
                     <?php endif; ?>
-                    
+
                     <form method="post">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="name" name="name" required 
+                                    <input type="text" class="form-control" id="name" name="name" required
                                            value="<?= htmlspecialchars($distributor['name']) ?>">
                                 </div>
                                 <div class="mb-3">

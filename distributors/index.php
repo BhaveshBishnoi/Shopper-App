@@ -20,13 +20,19 @@ if (!in_array($sort_order, $valid_orders)) {
     $sort_order = 'asc';
 }
 
-// Get summary statistics
-$stats_query = "SELECT 
+// FIRST: Ensure all pending_amount values are correct
+$update_pending_query = "UPDATE distributors 
+                        SET pending_amount = (total_goods_received - total_amount_paid) 
+                        WHERE pending_amount != (total_goods_received - total_amount_paid)";
+mysqli_query($conn, $update_pending_query);
+
+// Get accurate summary statistics
+$stats_query = "SELECT
     COUNT(*) as total_distributors,
-    SUM(total_goods_received) as total_goods,
-    SUM(total_amount_paid) as total_paid,
-    SUM(pending_amount) as total_pending,
-    SUM(CASE WHEN pending_amount > 0 THEN 1 ELSE 0 END) as pending_count
+    COALESCE(SUM(total_goods_received), 0) as total_goods,
+    COALESCE(SUM(total_amount_paid), 0) as total_paid,
+    COALESCE(SUM(total_goods_received) - SUM(total_amount_paid), 0) as total_pending,
+    SUM(CASE WHEN (total_goods_received - total_amount_paid) > 0 THEN 1 ELSE 0 END) as pending_count
 FROM distributors";
 $stats_result = mysqli_query($conn, $stats_query);
 $stats = mysqli_fetch_assoc($stats_result);
@@ -314,8 +320,8 @@ $products_result = mysqli_query($conn, $products_query);
                 </div>
             <?php else: ?>
                 <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i> No distributors found matching your criteria. 
-                    <a href="add.php" class="alert-link">Add your first distributor</a> or 
+                    <i class="fas fa-info-circle me-2"></i> No distributors found matching your criteria.
+                    <a href="add.php" class="alert-link">Add your first distributor</a> or
                     <a href="index.php" class="alert-link">clear your filters</a>.
                 </div>
             <?php endif; ?>
@@ -470,7 +476,7 @@ $(document).ready(function() {
             infoFiltered: "(filtered from _MAX_ total entries)"
         }
     });
-    
+
     // Add hover effect to cards
     $('.card-hover').hover(
         function() {
